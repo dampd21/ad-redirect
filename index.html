@@ -47,32 +47,46 @@
     
     const PLACE_URL = 'https://m.place.naver.com/restaurant/1309812619/home';
     const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyWzaUUMvN_U8zkP2OO-Iu4jE_nXUZe00jzjKQhMfDhFBu9wDKrqOyN1DeE-JL-VR1n/exec';
-    const SECRET_KEY = 'ehekarhf17';  // 🔑 암호화 키 (원하는 값으로 변경)
+    const SECRET_KEY = 'ehekarhf17';
     
     // ============================================
-    // 🔓 복호화 함수
+    // 🔐 암호화 함수
     // ============================================
     
-    function decrypt(encoded) {
-        try {
-            // Base64 디코딩
-            const decoded = atob(encoded);
-            // XOR 복호화
-            let result = '';
-            for (let i = 0; i < decoded.length; i++) {
-                result += String.fromCharCode(
-                    decoded.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
-                );
-            }
-            return result;
-        } catch(e) {
-            return null;
+    function encrypt(text) {
+        let encrypted = '';
+        for (let i = 0; i < text.length; i++) {
+            encrypted += String.fromCharCode(
+                text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+            );
         }
+        return btoa(encrypted);
     }
     
     // ============================================
     // 📊 데이터 수집
     // ============================================
+    
+    const params = new URLSearchParams(location.search);
+    
+    // 짧은 변수명으로 파라미터 받기
+    const keyword = params.get('k') || '';
+    const query = params.get('q') || '';
+    const rank = params.get('r') || '';
+    
+    // 🔒 URL 히스토리 암호화 (뒤로가기 시 암호화된 URL 보이도록)
+    if (keyword || query || rank) {
+        const originalParams = new URLSearchParams();
+        if (keyword) originalParams.set('keyword', keyword);
+        if (query) originalParams.set('query', query);
+        if (rank) originalParams.set('rank', rank);
+        
+        const encrypted = encrypt(originalParams.toString());
+        const cleanURL = location.pathname + '?d=' + encodeURIComponent(encrypted);
+        
+        // 히스토리 교체 (새로고침 안됨)
+        history.replaceState(null, '', cleanURL);
+    }
     
     // 방문 횟수
     let visitCount = parseInt(localStorage.getItem('_vc') || 0) + 1;
@@ -83,30 +97,6 @@
     const now = Date.now();
     const gapSeconds = lastVisit ? Math.floor((now - lastVisit) / 1000) : null;
     localStorage.setItem('_lt', now);
-    
-    // URL 파라미터 (암호화된 값)
-    const params = new URLSearchParams(location.search);
-    const encryptedData = params.get('d');
-    
-    let keyword = '';
-    let query = '';
-    let rank = '';
-    
-    // 암호화된 파라미터가 있으면 복호화
-    if (encryptedData) {
-        const decrypted = decrypt(encryptedData);
-        if (decrypted) {
-            const decoded = new URLSearchParams(decrypted);
-            keyword = decoded.get('keyword') || '';
-            query = decoded.get('query') || '';
-            rank = decoded.get('rank') || '';
-        }
-    } else {
-        // 기존 방식 호환 (평문 파라미터)
-        keyword = params.get('keyword') || '';
-        query = params.get('query') || '';
-        rank = params.get('rank') || '';
-    }
     
     // 핑거프린트
     const fingerprint = btoa([
@@ -132,10 +122,10 @@
         const data = await res.json();
         ip = data.ip;
     } catch(e) {
-        // IP 조회 실패 시 스킵
+        // 스킵
     }
     
-    // 한국 시간으로 정확하게 변환
+    // 한국 시간
     const koreaTime = new Date().toLocaleString('ko-KR', { 
         timeZone: 'Asia/Seoul',
         year: 'numeric',
@@ -158,12 +148,11 @@
         rank: rank,
         isMobile: /Mobile|Android|iPhone/i.test(navigator.userAgent),
         screen: screen.width + 'x' + screen.height,
-        fingerprint: fingerprint,
-        hasParams: !!(keyword || query || rank)  // 파라미터 유무 체크
+        fingerprint: fingerprint
     };
     
     // Google Sheets 전송 (파라미터 있을 때만)
-    if (trackData.hasParams) {
+    if (keyword || query || rank) {
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 2000);
@@ -177,7 +166,7 @@
             });
             clearTimeout(timeout);
         } catch(e) {
-            // 전송 실패 시 스킵
+            // 스킵
         }
     }
     
