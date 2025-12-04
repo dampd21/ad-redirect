@@ -31,14 +31,6 @@
             to { transform: rotate(360deg); }
         }
         p { font-size: 14px; }
-        #debug { 
-            position: fixed; 
-            bottom: 10px; 
-            left: 10px; 
-            font-size: 11px; 
-            color: #999;
-            max-width: 90%;
-        }
     </style>
 </head>
 <body>
@@ -46,33 +38,41 @@
         <div class="spinner"></div>
         <p>잠시만 기다려주세요...</p>
     </div>
-    <div id="debug"></div>
 
 <script>
 (async function() {
-    const debug = (msg) => {
-        console.log(msg);
-        document.getElementById('debug').innerHTML += msg + '<br>';
-    };
-    
     // ============================================
-    // ⚙️ 설정 - 아래 2개만 수정하세요!
+    // ⚙️ 설정
     // ============================================
     
     const PLACE_URL = 'https://m.place.naver.com/restaurant/1309812619/home';
     const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyWzaUUMvN_U8zkP2OO-Iu4jE_nXUZe00jzjKQhMfDhFBu9wDKrqOyN1DeE-JL-VR1n/exec';
+    const SECRET_KEY = 'ehekarhf17';  // 🔑 암호화 키 (원하는 값으로 변경)
     
     // ============================================
+    // 🔓 복호화 함수
+    // ============================================
     
-    debug('1. 시작');
+    function decrypt(encoded) {
+        try {
+            // Base64 디코딩
+            const decoded = atob(encoded);
+            // XOR 복호화
+            let result = '';
+            for (let i = 0; i < decoded.length; i++) {
+                result += String.fromCharCode(
+                    decoded.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+                );
+            }
+            return result;
+        } catch(e) {
+            return null;
+        }
+    }
     
-    // 설정 체크
-    if (PLACE_URL.includes('여기에_플레이스')) {
-        debug('❌ PLACE_URL 설정 안됨!');
-    }
-    if (SHEET_URL.includes('여기에_Apps')) {
-        debug('❌ SHEET_URL 설정 안됨!');
-    }
+    // ============================================
+    // 📊 데이터 수집
+    // ============================================
     
     // 방문 횟수
     let visitCount = parseInt(localStorage.getItem('_vc') || 0) + 1;
@@ -84,9 +84,29 @@
     const gapSeconds = lastVisit ? Math.floor((now - lastVisit) / 1000) : null;
     localStorage.setItem('_lt', now);
     
-    // URL 파라미터
+    // URL 파라미터 (암호화된 값)
     const params = new URLSearchParams(location.search);
-    debug('2. 파라미터: ' + location.search);
+    const encryptedData = params.get('d');
+    
+    let keyword = '';
+    let query = '';
+    let rank = '';
+    
+    // 암호화된 파라미터가 있으면 복호화
+    if (encryptedData) {
+        const decrypted = decrypt(encryptedData);
+        if (decrypted) {
+            const decoded = new URLSearchParams(decrypted);
+            keyword = decoded.get('keyword') || '';
+            query = decoded.get('query') || '';
+            rank = decoded.get('rank') || '';
+        }
+    } else {
+        // 기존 방식 호환 (평문 파라미터)
+        keyword = params.get('keyword') || '';
+        query = params.get('query') || '';
+        rank = params.get('rank') || '';
+    }
     
     // 핑거프린트
     const fingerprint = btoa([
@@ -98,8 +118,7 @@
         navigator.maxTouchPoints || 0
     ].join('|')).slice(0, 24);
     
-    // IP 가져오기 (타임아웃 2초)
-    debug('3. IP 조회 중...');
+    // IP 가져오기
     let ip = 'unknown';
     try {
         const controller = new AbortController();
@@ -112,47 +131,55 @@
         
         const data = await res.json();
         ip = data.ip;
-        debug('4. IP: ' + ip);
     } catch(e) {
-        debug('4. IP 조회 실패 (스킵)');
+        // IP 조회 실패 시 스킵
     }
+    
+    // 한국 시간으로 정확하게 변환
+    const koreaTime = new Date().toLocaleString('ko-KR', { 
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
     
     // 수집 데이터
     const trackData = {
         ip: ip,
         visitCount: visitCount,
         gapSeconds: gapSeconds,
-        time: new Date().toLocaleString('ko-KR'),
-        keyword: params.get('keyword') || '',
-        query: params.get('query') || '',
-        rank: params.get('rank') || '',
+        time: koreaTime,
+        keyword: keyword,
+        query: query,
+        rank: rank,
         isMobile: /Mobile|Android|iPhone/i.test(navigator.userAgent),
         screen: screen.width + 'x' + screen.height,
-        fingerprint: fingerprint
+        fingerprint: fingerprint,
+        hasParams: !!(keyword || query || rank)  // 파라미터 유무 체크
     };
     
-    debug('5. 시트 전송 중...');
-    
-    // Google Sheets 전송 (타임아웃 2초)
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-        
-        await fetch(SHEET_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(trackData),
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
-        
-        debug('6. 전송 완료');
-    } catch(e) {
-        debug('6. 전송 실패 (스킵)');
+    // Google Sheets 전송 (파라미터 있을 때만)
+    if (trackData.hasParams) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 2000);
+            
+            await fetch(SHEET_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(trackData),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+        } catch(e) {
+            // 전송 실패 시 스킵
+        }
     }
-    
-    debug('7. 이동: ' + PLACE_URL);
     
     // 이동
     setTimeout(() => {
