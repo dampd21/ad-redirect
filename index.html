@@ -31,6 +31,14 @@
             to { transform: rotate(360deg); }
         }
         p { font-size: 14px; }
+        #debug { 
+            position: fixed; 
+            bottom: 10px; 
+            left: 10px; 
+            font-size: 11px; 
+            color: #999;
+            max-width: 90%;
+        }
     </style>
 </head>
 <body>
@@ -38,34 +46,49 @@
         <div class="spinner"></div>
         <p>잠시만 기다려주세요...</p>
     </div>
+    <div id="debug"></div>
 
 <script>
 (async function() {
+    const debug = (msg) => {
+        console.log(msg);
+        document.getElementById('debug').innerHTML += msg + '<br>';
+    };
     
     // ============================================
     // ⚙️ 설정 - 아래 2개만 수정하세요!
     // ============================================
     
-    const PLACE_URL = https://m.place.naver.com/restaurant/1309812619/home
-    const SHEET_URL = https://script.google.com/macros/s/AKfycbyWzaUUMvN_U8zkP2OO-Iu4jE_nXUZe00jzjKQhMfDhFBu9wDKrqOyN1DeE-JL-VR1n/exec
+    const PLACE_URL = 'https://m.place.naver.com/place/여기에_플레이스_ID';
+    const SHEET_URL = '여기에_Apps_Script_URL';
     
     // ============================================
     
+    debug('1. 시작');
     
-    // 방문 횟수 카운트
+    // 설정 체크
+    if (PLACE_URL.includes('여기에_플레이스')) {
+        debug('❌ PLACE_URL 설정 안됨!');
+    }
+    if (SHEET_URL.includes('여기에_Apps')) {
+        debug('❌ SHEET_URL 설정 안됨!');
+    }
+    
+    // 방문 횟수
     let visitCount = parseInt(localStorage.getItem('_vc') || 0) + 1;
     localStorage.setItem('_vc', visitCount);
     
-    // 방문 간격 계산
+    // 방문 간격
     const lastVisit = parseInt(localStorage.getItem('_lt') || 0);
     const now = Date.now();
     const gapSeconds = lastVisit ? Math.floor((now - lastVisit) / 1000) : null;
     localStorage.setItem('_lt', now);
     
-    // URL 파라미터 추출
+    // URL 파라미터
     const params = new URLSearchParams(location.search);
+    debug('2. 파라미터: ' + location.search);
     
-    // 핑거프린트 생성
+    // 핑거프린트
     const fingerprint = btoa([
         navigator.language,
         screen.width + 'x' + screen.height,
@@ -75,15 +98,26 @@
         navigator.maxTouchPoints || 0
     ].join('|')).slice(0, 24);
     
-    // IP 주소 가져오기
+    // IP 가져오기 (타임아웃 2초)
+    debug('3. IP 조회 중...');
     let ip = 'unknown';
     try {
-        const res = await fetch('https://api.ipify.org?format=json');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+        
+        const res = await fetch('https://api.ipify.org?format=json', {
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        
         const data = await res.json();
         ip = data.ip;
-    } catch(e) {}
+        debug('4. IP: ' + ip);
+    } catch(e) {
+        debug('4. IP 조회 실패 (스킵)');
+    }
     
-    // 수집할 데이터
+    // 수집 데이터
     const trackData = {
         ip: ip,
         visitCount: visitCount,
@@ -97,18 +131,33 @@
         fingerprint: fingerprint
     };
     
-    // Google Sheets로 전송
+    debug('5. 시트 전송 중...');
+    
+    // Google Sheets 전송 (타임아웃 2초)
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+        
         await fetch(SHEET_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(trackData)
+            body: JSON.stringify(trackData),
+            signal: controller.signal
         });
-    } catch(e) {}
+        clearTimeout(timeout);
+        
+        debug('6. 전송 완료');
+    } catch(e) {
+        debug('6. 전송 실패 (스킵)');
+    }
     
-    // 네이버 플레이스로 이동
-    window.location.href = PLACE_URL;
+    debug('7. 이동: ' + PLACE_URL);
+    
+    // 이동
+    setTimeout(() => {
+        window.location.href = PLACE_URL;
+    }, 500);
     
 })();
 </script>
