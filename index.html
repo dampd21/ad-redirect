@@ -1,9 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>페이지 이동 중...</title>
+
+    <!-- 파비콘 & 앱 아이콘 (ad-redirect 전용) -->
+    <link rel="icon" type="image/x-icon" href="https://dampd21.github.io/ad-redirect/icon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://dampd21.github.io/ad-redirect/icon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://dampd21.github.io/ad-redirect/icon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="https://dampd21.github.io/ad-redirect/icon/favicon-96x96.png">
+
+    <link rel="apple-touch-icon" sizes="57x57" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://dampd21.github.io/ad-redirect/icon/apple-icon-180x180.png">
+
+    <link rel="manifest" href="https://dampd21.github.io/ad-redirect/icon/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="https://dampd21.github.io/ad-redirect/icon/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -39,143 +61,143 @@
         <p>잠시만 기다려주세요...</p>
     </div>
 
-<script>
-(async function() {
-    // ============================================
-    // ⚙️ 설정
-    // ============================================
-    
-    const PLACE_URL = 'https://dampd21.github.io/oneblock/';
-    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyE2S4KmKYHHyYiQw263oTbuJ8yAW0AhcxvCVph1EvpwTbc9ytwhRPszjxyN5THuyyg/exec';
-    const SECRET_KEY = 'ehekarhf17';
-    
-    // ============================================
-    // 🔐 암호화 함수
-    // ============================================
-    
-    function encrypt(text) {
-        let encrypted = '';
-        for (let i = 0; i < text.length; i++) {
-            encrypted += String.fromCharCode(
-                text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
-            );
+    <script>
+    (async function() {
+        // ============================================
+        // ⚙️ 설정
+        // ============================================
+        
+        const PLACE_URL = 'https://dampd21.github.io/oneblock/';
+        const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyE2S4KmKYHHyYiQw263oTbuJ8yAW0AhcxvCVph1EvpwTbc9ytwhRPszjxyN5THuyyg/exec';
+        const SECRET_KEY = 'ehekarhf17';
+        
+        // ============================================
+        // 🔐 암호화 함수
+        // ============================================
+        
+        function encrypt(text) {
+            let encrypted = '';
+            for (let i = 0; i < text.length; i++) {
+                encrypted += String.fromCharCode(
+                    text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length)
+                );
+            }
+            return btoa(encrypted);
         }
-        return btoa(encrypted);
-    }
-    
-    // ============================================
-    // 📊 데이터 수집
-    // ============================================
-    
-    const params = new URLSearchParams(location.search);
-    
-    // 짧은 변수명으로 파라미터 받기
-    const keyword = params.get('k') || '';
-    const query = params.get('q') || '';
-    const rank = params.get('r') || '';
-    
-    // 🔒 URL 히스토리 암호화 (뒤로가기 시 암호화된 URL 보이도록)
-    if (keyword || query || rank) {
-        const originalParams = new URLSearchParams();
-        if (keyword) originalParams.set('keyword', keyword);
-        if (query) originalParams.set('query', query);
-        if (rank) originalParams.set('rank', rank);
         
-        const encrypted = encrypt(originalParams.toString());
-        const cleanURL = location.pathname + '?d=' + encodeURIComponent(encrypted);
+        // ============================================
+        // 📊 데이터 수집
+        // ============================================
         
-        // 히스토리 교체 (새로고침 안됨)
-        history.replaceState(null, '', cleanURL);
-    }
-    
-    // 방문 횟수
-    let visitCount = parseInt(localStorage.getItem('_vc') || 0) + 1;
-    localStorage.setItem('_vc', visitCount);
-    
-    // 방문 간격
-    const lastVisit = parseInt(localStorage.getItem('_lt') || 0);
-    const now = Date.now();
-    const gapSeconds = lastVisit ? Math.floor((now - lastVisit) / 1000) : null;
-    localStorage.setItem('_lt', now);
-    
-    // 핑거프린트
-    const fingerprint = btoa([
-        navigator.language,
-        screen.width + 'x' + screen.height,
-        screen.colorDepth,
-        new Date().getTimezoneOffset(),
-        navigator.hardwareConcurrency || 0,
-        navigator.maxTouchPoints || 0
-    ].join('|')).slice(0, 24);
-    
-    // IP 가져오기
-    let ip = 'unknown';
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const params = new URLSearchParams(location.search);
         
-        const res = await fetch('https://api.ipify.org?format=json', {
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
+        // 짧은 변수명으로 파라미터 받기
+        const keyword = params.get('k') || '';
+        const query = params.get('q') || '';
+        const rank = params.get('r') || '';
         
-        const data = await res.json();
-        ip = data.ip;
-    } catch(e) {
-        // 스킵
-    }
-    
-    // 한국 시간
-    const koreaTime = new Date().toLocaleString('ko-KR', { 
-        timeZone: 'Asia/Seoul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
-    
-    // 수집 데이터
-    const trackData = {
-        ip: ip,
-        visitCount: visitCount,
-        gapSeconds: gapSeconds,
-        time: koreaTime,
-        keyword: keyword,
-        query: query,
-        rank: rank,
-        isMobile: /Mobile|Android|iPhone/i.test(navigator.userAgent),
-        screen: screen.width + 'x' + screen.height,
-        fingerprint: fingerprint
-    };
-    
-    // Google Sheets 전송 (파라미터 있을 때만)
-    if (keyword || query || rank) {
+        // 🔒 URL 히스토리 암호화 (뒤로가기 시 암호화된 URL 보이도록)
+        if (keyword || query || rank) {
+            const originalParams = new URLSearchParams();
+            if (keyword) originalParams.set('keyword', keyword);
+            if (query) originalParams.set('query', query);
+            if (rank) originalParams.set('rank', rank);
+            
+            const encrypted = encrypt(originalParams.toString());
+            const cleanURL = location.pathname + '?d=' + encodeURIComponent(encrypted);
+            
+            // 히스토리 교체 (새로고침 안됨)
+            history.replaceState(null, '', cleanURL);
+        }
+        
+        // 방문 횟수
+        let visitCount = parseInt(localStorage.getItem('_vc') || 0) + 1;
+        localStorage.setItem('_vc', visitCount);
+        
+        // 방문 간격
+        const lastVisit = parseInt(localStorage.getItem('_lt') || 0);
+        const now = Date.now();
+        const gapSeconds = lastVisit ? Math.floor((now - lastVisit) / 1000) : null;
+        localStorage.setItem('_lt', now);
+        
+        // 핑거프린트
+        const fingerprint = btoa([
+            navigator.language,
+            screen.width + 'x' + screen.height,
+            screen.colorDepth,
+            new Date().getTimezoneOffset(),
+            navigator.hardwareConcurrency || 0,
+            navigator.maxTouchPoints || 0
+        ].join('|')).slice(0, 24);
+        
+        // IP 가져오기
+        let ip = 'unknown';
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 2000);
             
-            await fetch(SHEET_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(trackData),
+            const res = await fetch('https://api.ipify.org?format=json', {
                 signal: controller.signal
             });
             clearTimeout(timeout);
+            
+            const data = await res.json();
+            ip = data.ip;
         } catch(e) {
             // 스킵
         }
-    }
-    
-    // 이동
-    setTimeout(() => {
-        window.location.href = PLACE_URL;
-    }, 500);
-    
-})();
-</script>
+        
+        // 한국 시간
+        const koreaTime = new Date().toLocaleString('ko-KR', { 
+            timeZone: 'Asia/Seoul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        
+        // 수집 데이터
+        const trackData = {
+            ip: ip,
+            visitCount: visitCount,
+            gapSeconds: gapSeconds,
+            time: koreaTime,
+            keyword: keyword,
+            query: query,
+            rank: rank,
+            isMobile: /Mobile|Android|iPhone/i.test(navigator.userAgent),
+            screen: screen.width + 'x' + screen.height,
+            fingerprint: fingerprint
+        };
+        
+        // Google Sheets 전송 (파라미터 있을 때만)
+        if (keyword || query || rank) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 2000);
+                
+                await fetch(SHEET_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(trackData),
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+            } catch(e) {
+                // 스킵
+            }
+        }
+        
+        // 이동
+        setTimeout(() => {
+            window.location.href = PLACE_URL;
+        }, 500);
+        
+    })();
+    </script>
 </body>
 </html>
